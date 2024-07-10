@@ -1056,8 +1056,8 @@ const Login = {
     <div>
     <div class="row">
       <div class="col s4 offset-s4">
-        <select id="selectUser" v-model="selectedUser" class="browser-default">
-          <option v-for="user in users" :key="user">{{ user }}</option>
+        <select id="selectUser" v-model="selectedUser" class="browser-default" :disabled="!users">
+          <option v-for="user in users" :key="user" >{{ user }}</option>
         </select>
         <label for="selectUser">בחר משתמש</label>
       </div>
