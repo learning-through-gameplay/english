@@ -97,9 +97,9 @@ const updateWeights = (key, weights, setItems) => {
     if (allZero){
 
     if (containsSign) {
-        // Convert all zero weights to 2
+        // Convert all zero weights to 1
         // todo: dynamic numbers
-        weights = weights.map(weight => weight === 0 ? 2 : weight);
+        weights = weights.map(weight => weight === 0 ? 1 : weight);
 
         // Set the first setItems elements that are 0 to 5
         let count = 0;
@@ -324,7 +324,7 @@ var ProgressBarComponent = Vue.component('progress-bar', {
       required: true
     },
     theme: {
-      type: Object,
+      type: String,
       required: true
     }
   },
@@ -934,20 +934,21 @@ var UserComponent = Vue.component('user', {
     <div>
       <div container>
         <div class="row">
-          <div class="col s8 offset-s2">
+          <div class="col s8 offset-s2" :style="{color: theme.colors.primary}">
             <h4>{{ name }}</h4>
           </div>
+
           <div class="input-field col s8 offset-s2">
-            <select @change="handleModeChange" v-model="selectedMode">
-              <option value="" disabled selected>בחר מצב משחק</option>
+            <select id="useMode" @change="handleModeChange" v-model="selectedMode">
               <option v-for="mode in modes" :value="mode.key" :key="mode.key">{{ mode.description }}</option>
             </select>
+            <label for="selectUser">בחר מצב משחק</label>
           </div>
           <div class="input-field col s8 offset-s2">
-            <select @change="handleThemeChanged" v-model="selectedTheme">
-              <option value="" disabled selected>בחר נושא</option>
-              <option v-for="(theme, key) in themes" :key="key" :value="key">{{ theme.name }}</option>
+            <select id="selectedTheme" @change="handleThemeChanged" v-model="selectedTheme">
+              <option v-for="(theme, key) in themes" :key="key" :value="key" >{{ theme.name }}</option>
             </select>
+            <label for="selectedTheme">בחר נושא</label>
           </div>
           <div class="col s8 offset-s2">
 
@@ -1018,31 +1019,33 @@ const SignUp = {
       <div class="row">
         <div class="col s4 offset-s4">
         הרשמה
-        <div>
-          <label for="username">שם משתמש:</label>
+        <div class="input-field">
+          <label for="username" :style="{ color: theme.colors.label }">שם משתמש:</label>
           <input type="text" id="username" v-model="username">
         </div>
         </div>
       </div>
+
       <div class="row">
         <div class="col s4 offset-s4">
-          <a class="waves-effect waves-light btn-large result blue-grey lighten-1" @click="SignUp">הרשם</a>
+          <a class="waves-effect waves-light btn-large result blue-grey lighten-1" @click="SignUp"  style="width: 100%; margin-bottom: 20px;">הרשם</a>
         </div>
         </div>
     </div>
   `,
   data() {
     return {
-      username: ''
+      username: '',
+      theme: getTheme(),
     };
   },
   methods: {
     SignUp() {
       if (this.username) {
         sessionStorage.setItem('username', this.username);
-        users = JSON.parse(localStorage.getItem('users')) || [];
+        users = JSON.parse(localStorage.getItem('en_users')) || [];
         users.push(this.username);
-        localStorage.setItem('users', JSON.stringify(removeDuplicates(users)));
+        localStorage.setItem('en_users', JSON.stringify(removeDuplicates(users)));
         this.$router.push('/');
       } else {
         alert('הכנס שם משתמש');
@@ -1073,14 +1076,17 @@ const Login = {
   data() {
     return {
       selectedUser: '',
-      users: null
+      users: null,
+      theme: getTheme()
+
     };
   },
     created: function() {
-    this.users = removeDuplicates(JSON.parse(localStorage.getItem('users'))) || [];
+    this.users = removeDuplicates(JSON.parse(localStorage.getItem('en_users'))) || [];
     if (this.users.length === 0) {
       this.$router.push('/signUp');
     }
+    theme = getTheme();
   },
   methods: {
     login() {
@@ -1161,6 +1167,50 @@ var app = new Vue({
            this.$router.push('/login');
         }, updateTheme(){
            this.theme = getTheme();
+           this.changeGlobalStyle();
+        }, addGlobalStyle() {
+          const style = document.createElement('style');
+          style.id = 'dynamic-global-style';
+          style.innerHTML = `
+                  body {
+                    background-color: #F5F5F5; /* Hex color code */
+                  }
+
+                .dropdown-content li > a, .dropdown-content li > span {
+                  color: black !important;
+                  background: white !important;
+                }
+
+                .select-wrapper input.select-dropdown {
+                  color: black !important;
+                  background: white !important;
+                  padding-right: 10px;
+                }
+          `;
+          document.head.appendChild(style);
+        },
+        changeGlobalStyle() {
+          const style = document.getElementById('dynamic-global-style');
+            style.innerHTML = `
+               body {
+                  background-color: ${this.theme.colors.background}; /* Hex color code */
+                }
+
+                .dropdown-content li > a, .dropdown-content li > span {
+                  color: ${this.theme.colors.text} !important;
+                  background: ${this.theme.colors.tertiary} !important;
+                  text-align: right; /* Align text to the right */
+                }
+
+                .select-wrapper input.select-dropdown {
+                  color: ${this.theme.colors.text} !important;
+                  background: ${this.theme.colors.background} !important;
+                  text-align: right; /* Align text to the right */
+
+                }
+
+
+            `;
         }
     },
     created: {
@@ -1169,11 +1219,12 @@ var app = new Vue({
          }
     },
     mounted() {
-        version = localStorage.getItem('version');
+        version = localStorage.getItem('en_version', 0.1);
         if (!version){
             localStorage.clear();
         }
-        localStorage.setItem('version', 0.1)
+        this.addGlobalStyle();
+        localStorage.setItem('en_version', 0.1)
        document.getElementById('loading-screen').classList.add('hidden');
     }
 }).$mount('#app')

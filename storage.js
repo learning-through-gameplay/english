@@ -4,7 +4,7 @@ function getUser() {
 }
 
 function getKey(key) {
-    return `${key}_${getUser()}_LocalData`;
+    return `en_${key}_${getUser()}_LocalData`;
 }
 
 
