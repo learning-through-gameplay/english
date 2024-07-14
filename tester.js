@@ -31,7 +31,7 @@ function getNItmes(number) {
 function render(object) {
     switch (object.type) {
         case "text":
-            return object.value;
+        return object.value;
         case "audio":
         return `<a class="brand-logo" onclick="audio('${object.value}')"><i class="medium material-icons">play_circle_filled</i></a>`;
         case "text_to_speech":
@@ -330,7 +330,7 @@ var ProgressBarComponent = Vue.component('progress-bar', {
   },
   template: `
     <div>
-      <p>{{ title }}: {{ progress.progress }}/{{ progress.total }}</p>
+      <p :style="{color: theme.colors.text}">{{ title }}: {{ progress.progress }}/{{ progress.total }}</p>
     <div class="progress-container" :style="{ background: theme.progressBar.background }">
         <div class="progress-bar" :style="{ width: (100 - ((progress.progress / progress.total) * 100)) + '%' }"></div>
     </div>
@@ -425,7 +425,7 @@ var MCQComponent = Vue.component('msq',Vue.extend({
 
     <div class="container">
         <div class="row">
-            <h3 v-html="exercise"></h3>
+            <h3 v-html="exercise" :style="{color: theme.colors.text}"></h3>
         </div>
         <div class="row">
             <a class="waves-effect waves-light btn-large result"
@@ -437,7 +437,7 @@ var MCQComponent = Vue.component('msq',Vue.extend({
         <div class="row" dir="rtl">
             <h2 v-bind:class="{ 'error': message.error, 'success': message.success }">{{ message.value }}</h2>
         </div>
-        <div class="row"><h3>{{ score }}</h3></div>
+        <div class="row"><h3 :style="{color: theme.colors.text}">{{ score }}</h3></div>
         <progress-bar :title="'Current Level'" :progress="progress" :theme="theme"></progress-bar>
         </div>
         </div>
@@ -531,7 +531,7 @@ var CommonComponent = Vue.component('common',Vue.extend({
         <div class="row" dir="rtl">
             <h2 v-bind:class="{ 'error': message.error, 'success': message.success }">{{ message.value }}</h2>
         </div>
-        <div class="row"><h3>{{ score }}</h3></div>
+        <div class="row"><h3 :style="{color: theme.colors.text}">{{ score }}</h3></div>
         <progress-bar :title="'Current Level'" :progress="progress" :theme="theme"></progress-bar>
         </div>
         </div>
@@ -616,7 +616,7 @@ var SpellComponent = Vue.component('spell',Vue.extend({
 
     <div class="container">
         <div class="row">
-            <h3 v-html="exercise"></h3>
+            <h3 v-html="exercise" :style="{color: theme.colors.text}"></h3>
         </div>
         <div class="row">
         <div class="col s8 offset-s2">
@@ -634,7 +634,7 @@ var SpellComponent = Vue.component('spell',Vue.extend({
         <div class="row" dir="rtl">
             <h2 v-bind:class="{ 'error': message.error, 'success': message.success }">{{ message.value }}</h2>
         </div>
-        <div class="row"><h3>{{ score }}</h3></div>
+        <div class="row"><h3 :style="{color: theme.colors.text}">{{ score }}</h3></div>
         <progress-bar :title="'Current Level'" :progress="progress" :theme="theme"></progress-bar>
         </div>
         </div>
@@ -700,7 +700,7 @@ var DisplayComponent = Vue.component('display',{
     template: `
     <div class="container">
             <div class="row">
-                <h3 v-html="exercise"></h3>
+                <h3 v-html="exercise" :style="{color: theme.colors.text}"></h3>
             </div>
             <div class="row">
                 <div class="center-align">
@@ -826,7 +826,7 @@ var AppComponent = Vue.component('app',{
                     </div>
                 </div>
         </div>
-        <div class="row"><h3>{{ score }}</h3></div>
+        <div class="row"><h3 :style="{color: theme.colors.text}">{{ score }}</h3></div>
         <progress-bar :title="'Current Level'" :progress="progress" :theme="theme"></progress-bar>
         </div>
     </div></div>`,
@@ -934,7 +934,7 @@ var UserComponent = Vue.component('user', {
     <div>
       <div container>
         <div class="row">
-          <div class="col s8 offset-s2" :style="{color: theme.colors.primary}">
+          <div class="col s8 offset-s2" :style="{color: theme.colors.secondary}">
             <h4>{{ name }}</h4>
           </div>
 
