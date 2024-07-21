@@ -1,6 +1,12 @@
 
 function getUser() {
-    return sessionStorage.getItem('username')
+    user =  sessionStorage.getItem('username');
+    if (! user && !localStorage.getItem('en_users')){
+        localStorage.setItem('en_users', JSON.stringify([,'אורח']));
+        sessionStorage.setItem('username', 'אורח');
+        user = 'אורח';
+    }
+    return user;
 }
 
 function getKey(key) {
