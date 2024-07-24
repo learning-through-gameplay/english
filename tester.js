@@ -438,7 +438,7 @@ var MCQComponent = Vue.component('msq',Vue.extend({
             <h2 v-bind:class="{ 'error': message.error, 'success': message.success }">{{ message.value }}</h2>
         </div>
         <div class="row"><h3 :style="{color: theme.colors.text}">{{ score }}</h3></div>
-        <progress-bar :title="'Current Level'" :progress="progress" :theme="theme"></progress-bar>
+        <progress-bar :title="'שלב נוכחי'" :progress="progress" :theme="theme"></progress-bar>
         </div>
         </div>
     </div>`,
@@ -532,7 +532,7 @@ var CommonComponent = Vue.component('common',Vue.extend({
             <h2 v-bind:class="{ 'error': message.error, 'success': message.success }">{{ message.value }}</h2>
         </div>
         <div class="row"><h3 :style="{color: theme.colors.text}">{{ score }}</h3></div>
-        <progress-bar :title="'Current Level'" :progress="progress" :theme="theme"></progress-bar>
+        <progress-bar :title="'שלב נוכחי'" :progress="progress" :theme="theme"></progress-bar>
         </div>
         </div>
     </div>`,
@@ -635,7 +635,7 @@ var SpellComponent = Vue.component('spell',Vue.extend({
             <h2 v-bind:class="{ 'error': message.error, 'success': message.success }">{{ message.value }}</h2>
         </div>
         <div class="row"><h3 :style="{color: theme.colors.text}">{{ score }}</h3></div>
-        <progress-bar :title="'Current Level'" :progress="progress" :theme="theme"></progress-bar>
+        <progress-bar :title="'שלב נוכחי'" :progress="progress" :theme="theme"></progress-bar>
         </div>
         </div>
     </div>`,
@@ -827,7 +827,7 @@ var AppComponent = Vue.component('app',{
                 </div>
         </div>
         <div class="row"><h3 :style="{color: theme.colors.text}">{{ score }}</h3></div>
-        <progress-bar :title="'Current Level'" :progress="progress" :theme="theme"></progress-bar>
+        <progress-bar :title="'שלב נוכחי'" :progress="progress" :theme="theme"></progress-bar>
         </div>
     </div></div>`,
 
@@ -958,8 +958,8 @@ var UserComponent = Vue.component('user', {
             <div v-for="(app, index) in apps" :key="index" class="card">
               <div class="card-content">
                 <span class="card-title"><router-link :to="'/app/' + app.id" style="width: 100%; margin-bottom: 20px;">{{ app.name }}</router-link></span>
-                <p>Score: {{ app.score }}</p>
-                <progress-bar :title="'Progress'" :progress="app.progress" :theme="theme"></progress-bar>
+                <p>נקודות: {{ app.score }}</p>
+                <progress-bar :title="'התקדמות'" :progress="app.progress" :theme="theme"></progress-bar>
                 </div>
               </div>
             </div>
