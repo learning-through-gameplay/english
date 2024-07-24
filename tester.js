@@ -921,6 +921,9 @@ var MenuComponent = Vue.component('menu',{
         if (!route) {
           link = `/${app.type}/${id}`;
         }
+        if (app.type == 'app'){
+          link = `/play/${app.appType}/${id}`;
+        }
         if (menu === this.menu && route === this.$route.params.currentMenu){
             return link;
         }
