@@ -702,32 +702,26 @@ var DrawLetterComponent = Vue.component('draw', Vue.extend({
 
     <div class="container">
         <div class="row">
-            <h3 v-html="title" :style="{color: theme.colors.text}"></h3>
+            <h5 v-html="title" :style="{color: theme.colors.text}"></h5>
+            <h5 v-html="exercise" :style="{color: theme.colors.text}"></h5>
+
         </div>
         <div class="row">
-            <h3 v-html="exercise" :style="{color: theme.colors.text}"></h3>
-        </div>
-        <div class="row">
-        <div class="col s8 offset-s2">
-        <div>
-          <canvas id="drawingCanvas" width="280" height="280"></canvas>
-        </div>
+        <div class="center-align">
+          <canvas  id="drawingCanvas" width="%100" height="280"></canvas>
         </div>
        </div>
-       <div class="row">
-            <div class="center-align">
-               <a class="waves-effect waves-light btn-large result" v-on:click="check()" :style="{background: theme.colors.secondary}">בדוק</a>
-            </div>
-        </div>
+
         <div class="row">
             <div class="center-align">
+               <a class="waves-effect waves-light btn-large result" v-on:click="check()" :style="{background: theme.colors.secondary}">בדוק</a>
                <a class="waves-effect waves-light btn-large result" v-on:click="clearCanvas()" :style="{background: theme.colors.secondary}">נקה</a>
             </div>
         </div>
         <div class="row" dir="rtl">
-            <h2 v-bind:class="{ 'error': message.error, 'success': message.success }">{{ message.value }}</h2>
+            <h5 v-bind:class="{ 'error': message.error, 'success': message.success }">{{ message.value }}</h5>
         </div>
-        <div class="row"><h3 :style="{color: theme.colors.text}">{{ score }}</h3></div>
+        <div class="row"><h5 :style="{color: theme.colors.text}">{{ score }}</h5></div>
         <progress-bar :title="'שלב נוכחי'" :progress="progress" :theme="theme"></progress-bar>
         </div>
         </div>
@@ -747,43 +741,62 @@ var DrawLetterComponent = Vue.component('draw', Vue.extend({
 
     methods: {
         create: function (code) {
-            const canvas = document.getElementById('drawingCanvas');
-            const ctx = canvas.getContext('2d');
+        const canvas = document.getElementById('drawingCanvas');
+        const ctx = canvas.getContext('2d');
 
-            let isDrawing = false;
-            let lastX = 0;
-            let lastY = 0;
+        let isDrawing = false;
+        let lastX = 0;
+        let lastY = 0;
 
-            ctx.lineWidth = 10;
-            ctx.lineCap = 'round';
-            ctx.strokeStyle = 'black';
+        ctx.lineWidth = 10;
+        ctx.lineCap = 'round';
+        ctx.strokeStyle = 'black';
 
-            const startDrawing = (e) => {
-                isDrawing = true;
-                [lastX, lastY] = this.getCoordinates(e);
-            };
+        const getCoordinates = (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
 
-            const draw = (e) => {
-                if (!isDrawing) return;
-                ctx.beginPath();
-                ctx.moveTo(lastX, lastY);
-                const [currentX, currentY] = this.getCoordinates(e);
-                ctx.lineTo(currentX, currentY);
-                ctx.stroke();
-                [lastX, lastY] = [currentX, currentY];
-            };
+            if (e.type.includes('touch')) {
+                return [
+                    (e.touches[0].clientX - rect.left) * scaleX,
+                    (e.touches[0].clientY - rect.top) * scaleY
+                ];
+            } else {
+                return [
+                    (e.clientX - rect.left) * scaleX,
+                    (e.clientY - rect.top) * scaleY
+                ];
+            }
+        };
 
-            const stopDrawing = () => {
-                isDrawing = false;
-            };
+        const startDrawing = (e) => {
+            isDrawing = true;
+            [lastX, lastY] = getCoordinates(e);
+        };
 
-            canvas.addEventListener('touchstart', startDrawing);
-            canvas.addEventListener('touchmove', draw);
-            canvas.addEventListener('touchend', stopDrawing);
-            canvas.addEventListener('mousedown', startDrawing);
-            canvas.addEventListener('mousemove', draw);
-            canvas.addEventListener('mouseup', stopDrawing);
-            canvas.addEventListener('mouseout', stopDrawing);
+        const draw = (e) => {
+            if (!isDrawing) return;
+            e.preventDefault(); // Prevent scrolling on touch devices
+            ctx.beginPath();
+            ctx.moveTo(lastX, lastY);
+            const [currentX, currentY] = getCoordinates(e);
+            ctx.lineTo(currentX, currentY);
+            ctx.stroke();
+            [lastX, lastY] = [currentX, currentY];
+        };
+
+        const stopDrawing = () => {
+            isDrawing = false;
+        };
+
+        canvas.addEventListener('touchstart', startDrawing, { passive: false });
+        canvas.addEventListener('touchmove', draw, { passive: false });
+        canvas.addEventListener('touchend', stopDrawing);
+        canvas.addEventListener('mousedown', startDrawing);
+        canvas.addEventListener('mousemove', draw);
+        canvas.addEventListener('mouseup', stopDrawing);
+        canvas.addEventListener('mouseout', stopDrawing);
 
 
             const list = getDataList(this.currentApp.listName);
