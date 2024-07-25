@@ -611,6 +611,7 @@ var CommonComponent = Vue.component('common',Vue.extend({
     },
 }))
 
+
 var SpellComponent = Vue.component('spell',Vue.extend({
     template: `<div>
 
@@ -696,6 +697,200 @@ var SpellComponent = Vue.component('spell',Vue.extend({
     },
 }))
 
+var DrawLetterComponent = Vue.component('draw', Vue.extend({
+    template: `<div>
+
+    <div class="container">
+        <div class="row">
+            <h3 v-html="title" :style="{color: theme.colors.text}"></h3>
+        </div>
+        <div class="row">
+            <h3 v-html="exercise" :style="{color: theme.colors.text}"></h3>
+        </div>
+        <div class="row">
+        <div class="col s8 offset-s2">
+        <div>
+          <canvas id="drawingCanvas" width="280" height="280"></canvas>
+        </div>
+        </div>
+       </div>
+       <div class="row">
+            <div class="center-align">
+               <a class="waves-effect waves-light btn-large result" v-on:click="check()" :style="{background: theme.colors.secondary}">בדוק</a>
+            </div>
+        </div>
+        <div class="row">
+            <div class="center-align">
+               <a class="waves-effect waves-light btn-large result" v-on:click="clearCanvas()" :style="{background: theme.colors.secondary}">נקה</a>
+            </div>
+        </div>
+        <div class="row" dir="rtl">
+            <h2 v-bind:class="{ 'error': message.error, 'success': message.success }">{{ message.value }}</h2>
+        </div>
+        <div class="row"><h3 :style="{color: theme.colors.text}">{{ score }}</h3></div>
+        <progress-bar :title="'שלב נוכחי'" :progress="progress" :theme="theme"></progress-bar>
+        </div>
+        </div>
+
+    </div>`,
+
+    extends: BaseGameComponent,
+
+    data: function() {
+        return {
+            title: '',
+            answer: null,
+            recognizedLetter: '',
+            score: 0
+        }
+    },
+
+    methods: {
+        create: function (code) {
+            const canvas = document.getElementById('drawingCanvas');
+            const ctx = canvas.getContext('2d');
+
+            let isDrawing = false;
+            let lastX = 0;
+            let lastY = 0;
+
+            ctx.lineWidth = 10;
+            ctx.lineCap = 'round';
+            ctx.strokeStyle = 'black';
+
+            const startDrawing = (e) => {
+                isDrawing = true;
+                [lastX, lastY] = this.getCoordinates(e);
+            };
+
+            const draw = (e) => {
+                if (!isDrawing) return;
+                ctx.beginPath();
+                ctx.moveTo(lastX, lastY);
+                const [currentX, currentY] = this.getCoordinates(e);
+                ctx.lineTo(currentX, currentY);
+                ctx.stroke();
+                [lastX, lastY] = [currentX, currentY];
+            };
+
+            const stopDrawing = () => {
+                isDrawing = false;
+            };
+
+            canvas.addEventListener('touchstart', startDrawing);
+            canvas.addEventListener('touchmove', draw);
+            canvas.addEventListener('touchend', stopDrawing);
+            canvas.addEventListener('mousedown', startDrawing);
+            canvas.addEventListener('mousemove', draw);
+            canvas.addEventListener('mouseup', stopDrawing);
+            canvas.addEventListener('mouseout', stopDrawing);
+
+
+            const list = getDataList(this.currentApp.listName);
+            const weightedRandomIndex = getWeightedRandomIndex(list,
+                                                               this.currentApp.questionIndex,
+                                                               getSetItems(this.currentApp));
+            this.title = this.currentApp.title;
+            this.questionIndex = weightedRandomIndex;
+            this.result = list[weightedRandomIndex][this.currentApp.resultIndex].value;
+            this.exercise = render(list[weightedRandomIndex][this.currentApp.questionIndex]);
+            action = generateQuestion(list[weightedRandomIndex][this.currentApp.questionIndex]);
+            if(this.reloadProgress()){
+                this.$forceUpdate();
+                setTimeout(() => {
+                this.ended = false;
+                action();
+                }, 500);
+            }
+        },
+
+        getCoordinates(e) {
+            const canvas = document.getElementById('drawingCanvas');
+            const rect = canvas.getBoundingClientRect();
+            const x = (e.clientX || e.touches[0].clientX) - rect.left;
+            const y = (e.clientY || e.touches[0].clientY) - rect.top;
+            return [x, y];
+        },
+
+        clearCanvas: function() {
+            const canvas = document.getElementById('drawingCanvas');
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            resultDiv.textContent = '';
+        },
+        check: function () {
+            const canvas = document.getElementById('drawingCanvas');
+            const list = getDataList(this.currentApp.listName);
+            const whitelist = new Set();
+            list.forEach(item => {
+                const letter = item[this.currentApp.resultIndex].value.toUpperCase();
+                if (/[A-Z]/.test(letter)) {
+                    whitelist.add(letter);
+                }
+            });
+            const tessedit_char_whitelist = Array.from(whitelist).join('')
+            console.log(tessedit_char_whitelist);
+            Tesseract.recognize(canvas, 'eng', {
+                logger: m => console.log(m),
+                tessedit_char_whitelist: tessedit_char_whitelist
+            }).then(({ data: { text, confidence, symbols } }) => {
+                this.recognizedLetter = text.trim().charAt(0);
+                console.log("Recognized letter:", this.recognizedLetter);
+                console.log("Confidence:", confidence);
+                console.log("Expected result:", this.result);
+
+                const confidenceThreshold = 40;
+
+                if (this.recognizedLetter && /[A-Z]/.test(this.recognizedLetter.toUpperCase())) {
+                    if (this.recognizedLetter === this.result.toUpperCase() && confidence >= confidenceThreshold) {
+                        this.message = {value: this.getSuccessMsg(), success: true};
+                        this.score += 1;
+                        updateWeightForKey(this.currentAppId, this.questionIndex, -1);
+                    } else if (confidence < confidenceThreshold) {
+                        this.message = {value: 'לא בטוח בזיהוי. נסה לכתוב ברור יותר.', error: true};
+                    } else {
+                        this.message = {value: `נסה שוב :( התשובה היא ${this.result}`, error: true};
+                        this.score = Math.max(0, this.score - 1);
+                        updateWeightForKey(this.currentAppId, this.questionIndex, 1);
+                    }
+                } else {
+                    this.message = {value: 'לא זוהתה אות באנגלית. נסה שוב.', error: true};
+                }
+
+                this.saveScore();
+                this.reloadProgress();
+                setTimeout(this.clearCanvas, 500);
+                if (this.message.success) {
+                    setTimeout(this.create, 1000);
+                }
+            });
+        },
+
+        calculateScore(confidence, symbols) {
+            if (symbols && symbols.length > 0) {
+                let symbolConfidence = symbols[0].confidence;
+                let normalizedScore = Math.round(symbolConfidence);
+                return Math.min(Math.max(normalizedScore, 0), 100) / 10;
+            } else {
+                return Math.round(confidence) / 10;
+            }
+        },
+
+        clearCanvas() {
+            const canvas = document.getElementById('drawingCanvas');
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        },
+
+        display: function() {
+        }
+    },
+
+    mounted() {
+        this.create();
+    }
+}));
+
 var DisplayComponent = Vue.component('display',{
     template: `
     <div class="container">
@@ -728,7 +923,9 @@ var DisplayComponent = Vue.component('display',{
         value: null,
     }},
 
-    mounted() {},
+    mounted() {
+        console.log('mounted')
+    },
     methods: {
         getItems: function(){
             this.currentIndex = 0;
@@ -1114,6 +1311,7 @@ const routes = [
     {path: '/play/mcq/:currentAppId', component: MCQComponent, props: true },
     {path: '/play/spell/:currentAppId', component: SpellComponent, props: true },
     {path: '/play/common/:currentAppId', component: CommonComponent, props: true },
+    {path: '/play/draw_letter/:currentAppId', component: DrawLetterComponent, props: true },
     {path: '/display/news/:currentAppId', component: DisplayComponent, props: true },
     {path: '/display/all/:currentAppId', component: DisplayComponent, props: true },
     {path: '/display/item/:currentAppId/:itemId', component: DisplayComponent, props: true },
