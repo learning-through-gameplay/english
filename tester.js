@@ -135,7 +135,9 @@ const getWeightsForKey = (key, setItems, elements) => {
             if (newWeights) {
                 weights = newWeights;
                 localStorage.setItem(getWeightsKey(key), JSON.stringify(weights));
-
+                console.log(getWeightsKey(key))
+                console.log(  localStorage.getItem(getWeightsKey(key)))
+                console.log(getWeightsKey('new'))
             }
         }
         return weights;
@@ -163,6 +165,8 @@ const getWeightsForKey = (key, setItems, elements) => {
 
 const updateWeightForKey = (key, index, change) => {
     // Retrieve the current weights from localStorage
+    console.log('Update key')
+    console.log(getWeightsKey(key))
     const storedWeights = localStorage.getItem(getWeightsKey(key));
     if (!storedWeights) {
         return
@@ -178,7 +182,6 @@ const updateWeightForKey = (key, index, change) => {
     localStorage.setItem(getWeightsKey(key), JSON.stringify(weights));
 
     setCurrentLevelProgress(key, weights);
-
     return weights;
 }
 
@@ -320,11 +323,11 @@ var ProgressBarComponent = Vue.component('progress-bar', {
       required: true
     },
     title: {
-      type: Object,
+      type: String,
       required: true
     },
     theme: {
-      type: String,
+      type: Object,
       required: true
     }
   },
@@ -374,6 +377,7 @@ var BaseGameComponent = Vue.component('base-game',{
         },
         reloadProgress: function(){
             this.progress = getCurrentLevelProgress(this.currentAppId);
+            console.log(this.progress)
             if (this.progress.progress == this.progress.total){
                 this.$router.push('/app/' + this.currentAppId);
                 return false;
@@ -652,7 +656,7 @@ var SpellComponent = Vue.component('spell',Vue.extend({
             this.saved = []
             const list = getDataList(this.currentApp.listName);
             const weightedRandomIndex = getWeightedRandomIndex(list,
-                                                               this.currentApp.questionIndex,
+                                                               this.currentAppId,
                                                                getSetItems(this.currentApp));
             this.result = list[weightedRandomIndex][this.currentApp.questionIndex].value;
             this.exercise = render({'type': 'speech', 'value': this.result});
@@ -801,7 +805,7 @@ var DrawLetterComponent = Vue.component('draw', Vue.extend({
 
             const list = getDataList(this.currentApp.listName);
             const weightedRandomIndex = getWeightedRandomIndex(list,
-                                                               this.currentApp.questionIndex,
+                                                               this.currentAppId,
                                                                getSetItems(this.currentApp));
             this.title = this.currentApp.title;
             this.questionIndex = weightedRandomIndex;
@@ -858,12 +862,15 @@ var DrawLetterComponent = Vue.component('draw', Vue.extend({
                     if (this.recognizedLetter === this.result.toUpperCase() && confidence >= confidenceThreshold) {
                         this.message = {value: this.getSuccessMsg(), success: true};
                         this.score += 1;
+                        this.saveScore();
+
                         updateWeightForKey(this.currentAppId, this.questionIndex, -1);
                     } else if (confidence < confidenceThreshold) {
                         this.message = {value: 'לא בטוח בזיהוי. נסה לכתוב ברור יותר.', error: true};
                     } else {
                         this.message = {value: `נסה שוב :( התשובה היא ${this.result}`, error: true};
                         this.score = Math.max(0, this.score - 1);
+                        this.saveScore();
                         updateWeightForKey(this.currentAppId, this.questionIndex, 1);
                     }
                 } else {
@@ -900,9 +907,172 @@ var DrawLetterComponent = Vue.component('draw', Vue.extend({
     },
 
     mounted() {
+        this.currentAppId = this.$route.params.currentAppId
+        this.currentApp = getItemById(apps, this.currentAppId);
+        this.reloadProgress();
+        this.updateScore();
         this.create();
     }
 }));
+
+var FallingAnswersComponent = Vue.component('falling-answers', Vue.extend({
+    template: `
+    <div class="container">
+        <div class="row">
+            <h3 v-html="title" :style="{color: theme.colors.text}"></h3>
+        </div>
+        <div class="row">
+            <h3 v-html="exercise" :style="{color: theme.colors.text}"></h3>
+        </div>
+        <div class="row">
+            <div class="game-area" ref="gameArea">
+                <div v-for="answer in fallingAnswers"
+                     :key="answer.id"
+                     class="falling-answer"
+                     :style="{top: answer.top + 'px', left: answer.left + 'px'}"
+                     @click="checkAnswer(answer)">
+                    {{ answer.text }}
+                </div>
+            </div>
+        </div>
+        <div class="row" dir="rtl">
+            <h2 v-bind:class="{ 'error': message.error, 'success': message.success }">{{ message.value }}</h2>
+        </div>
+        <div class="row"><h3 :style="{color: theme.colors.text}">{{ score }}</h3></div>
+        <progress-bar :title="'שלב נוכחי'" :progress="progress" :theme="theme"></progress-bar>
+    </div>
+    `,
+
+    extends: BaseGameComponent,
+
+    data: function() {
+        return {
+            title: '',
+            fallingAnswers: [],
+            score: 0,
+            gameInterval: null,
+            spawnInterval: null,
+            list: [],
+            mounted: false,
+            currentQuestionIndex: -1,
+            maxAnswersOnScreen: 6,
+        }
+    },
+
+    methods: {
+        create: function() {
+        },
+
+        createNewQuestion: function() {
+            const weightedRandomIndex = getWeightedRandomIndex(this.list,
+                                                               this.currentAppId,
+                                                               getSetItems(this.currentApp));
+            this.title = this.currentApp.title;
+            this.currentQuestionIndex = weightedRandomIndex;
+            this.result = this.list[weightedRandomIndex][this.currentApp.resultIndex].value;
+            this.exercise = render(this.list[weightedRandomIndex][this.currentApp.questionIndex]);
+            action = generateQuestion(this.list[weightedRandomIndex][this.currentApp.questionIndex]);
+            action();
+            this.updateFallingAnswers();
+        },
+
+        updateFallingAnswers: function() {
+
+            const correctAnswer = this.list[this.currentQuestionIndex][this.currentApp.resultIndex].value;
+            const wrongIndexes = getRandomIndexesExcluding(this.list, this.currentApp.resultIndex, this.currentQuestionIndex, this.maxAnswersOnScreen - 1);
+
+            // Clear all existing answers
+            this.fallingAnswers = [];
+       this.createAnswer(correctAnswer, true)
+
+            // Add the correct answer
+            this.fallingAnswers.push(this.createAnswer(correctAnswer, true));
+
+            // Add wrong answers
+            wrongIndexes.forEach(wrongIndex => {
+                const wrongAnswer = this.list[wrongIndex][this.currentApp.resultIndex].value;
+                this.fallingAnswers.push(this.createAnswer(wrongAnswer, false));
+            });
+
+            // Shuffle the answers
+            this.fallingAnswers = this.shuffleArray(this.fallingAnswers);
+        },
+
+
+        shuffleArray: function(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        },
+
+
+        startFallingAnimation: function() {
+            const gameAreaHeight = this.$refs.gameArea.offsetHeight;
+            const gameAreaWidth = this.$refs.gameArea.offsetWidth;
+
+            this.fallInterval = setInterval(() => {
+                const randomIndex = Math.floor(Math.random() * this.fallingAnswers.length);
+                const answer = this.fallingAnswers[randomIndex];
+                if (answer.top > gameAreaHeight) {
+                    answer.top = Math.random() * -200 - 50;
+                    answer.left = Math.random() * (gameAreaWidth - 50);
+                }
+            }, 1000);
+
+            this.gameInterval = setInterval(() => {
+                this.fallingAnswers.forEach(answer => {
+                    answer.top += 2;
+                });
+            }, 50);
+        },
+
+
+        createAnswer: function(text, isCorrect) {
+            const gameAreaWidth = this.$refs.gameArea ? this.$refs.gameArea.offsetWidth : window.innerWidth;
+            return {
+                id: Math.random().toString(36).substr(2, 9),
+                text: text,
+                isCorrect: isCorrect,
+                top: Math.random() * -200 - 50, // This will create a range from -250 to -50
+                left: Math.random() * (gameAreaWidth - 50)
+            };
+        },
+
+        checkAnswer: function(answer) {
+            if (answer.isCorrect) {
+                this.message = {value: this.getSuccessMsg(), success: true};
+                this.score += 1;
+                updateWeightForKey(this.currentAppId, this.currentQuestionIndex, -1);
+                this.createNewQuestion();
+            } else {
+                this.message = {value: 'נסה שוב', error: true};
+                this.score = Math.max(0, this.score - 1);
+            }
+            this.saveScore();
+            this.reloadProgress();
+        }
+    },
+
+    mounted() {
+        this.currentAppId = this.$route.params.currentAppId
+        this.currentApp = getItemById(apps, this.currentAppId);
+        this.reloadProgress();
+        this.updateScore();
+        this.mounted = true;
+        this.list = getDataList(this.currentApp.listName);
+        this.createNewQuestion();
+        this.reloadProgress();
+        this.startFallingAnimation();
+    },
+
+    beforeDestroy() {
+        clearInterval(this.gameInterval);
+        clearInterval(this.fallInterval);
+    }
+}));
+
 
 var DisplayComponent = Vue.component('display',{
     template: `
@@ -1325,6 +1495,7 @@ const routes = [
     {path: '/play/spell/:currentAppId', component: SpellComponent, props: true },
     {path: '/play/common/:currentAppId', component: CommonComponent, props: true },
     {path: '/play/draw_letter/:currentAppId', component: DrawLetterComponent, props: true },
+    {path: '/play/falling_answers/:currentAppId', component: FallingAnswersComponent, props: true },
     {path: '/display/news/:currentAppId', component: DisplayComponent, props: true },
     {path: '/display/all/:currentAppId', component: DisplayComponent, props: true },
     {path: '/display/item/:currentAppId/:itemId', component: DisplayComponent, props: true },
