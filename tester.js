@@ -1345,6 +1345,11 @@ var UserComponent = Vue.component('user', {
             </div>
           </div>
         </div>
+        <div class="row">
+        <div class="waves-effect waves-light btn-large result lighten-1 col s8 offset-s2" :style="{background: theme.colors.secondary}">
+          <a @click="userLogout">התנתק</a>
+        </div>
+        </div>
       </div>
     </div>
   `,
@@ -1380,6 +1385,11 @@ var UserComponent = Vue.component('user', {
   methods: {
     handleModeChange: function(){
         setActivityMode(this.selectedMode);
+    },
+    userLogout: function(){
+           sessionStorage.removeItem('username');
+           this.username = null;
+           this.$router.push('/login');
     },
     handleThemeChanged: function(){
         setTheme(this.selectedTheme);
@@ -1546,11 +1556,7 @@ var app = new Vue({
       },
 
     methods: {
-        UserLogout() {
-           sessionStorage.removeItem('username');
-           this.username = null;
-           this.$router.push('/login');
-        }, updateTheme(){
+        updateTheme(){
            this.theme = getTheme();
            this.changeGlobalStyle();
         }, addGlobalStyle() {
