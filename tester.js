@@ -847,9 +847,13 @@ var DrawLetterComponent = Vue.component('draw', Vue.extend({
             });
             const tessedit_char_whitelist = Array.from(whitelist).join('')
             console.log(tessedit_char_whitelist);
+
+
             Tesseract.recognize(canvas, 'eng', {
                 logger: m => console.log(m),
-                tessedit_char_whitelist: tessedit_char_whitelist
+                tessedit_char_whitelist: tessedit_char_whitelist,
+                oem: Tesseract.OEM_LSTM_ONLY,
+                psm: Tesseract.PSM_SINGLE_CHAR
             }).then(({ data: { text, confidence, symbols } }) => {
                 this.recognizedLetter = text.trim().charAt(0);
                 console.log("Recognized letter:", this.recognizedLetter);
